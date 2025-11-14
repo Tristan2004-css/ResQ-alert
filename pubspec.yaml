@@ -1,0 +1,27 @@
+name: resq_alert
+description: ResQ Alert demo app
+publish_to: "none"
+version: 1.0.0+1
+environment:
+  sdk: ">=2.18.0 <3.0.0"
+
+dependencies:
+  flutter:
+    sdk: flutter
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+
+flutter:
+  uses-material-design: true
+  assets:
+    - assets/whitelog.png
+    - assets/wcc_logo.png
+    - assets/help_about_placeholder.png
+    - assets/em_medical.png
+    - assets/em_fire.png
+    - assets/em_security.png
+    - assets/em_accident.png
+    - assets/em_natural.png
+    - assets/em_other.png

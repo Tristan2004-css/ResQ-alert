@@ -1,0 +1,1 @@
+void main() => print('ResQ Alert app entrypoint');
