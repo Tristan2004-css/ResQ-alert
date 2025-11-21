@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 
-// Import all screens you have in lib/screens/
+// ========== USER SCREENS ==========
 import 'screens/landing_page.dart';
 import 'screens/login_page.dart';
 import 'screens/user_login_page.dart';
@@ -19,86 +19,70 @@ import 'screens/safety_tips_page.dart';
 import 'screens/change_password_page.dart';
 import 'screens/notifications_page.dart';
 
+// ========== ADMIN SCREENS ==========
+import 'screens_admin/login_screen.dart'; // ADMIN login
+import 'screens_admin/dashboard_screen.dart'; // ADMIN dashboard
+import 'screens_admin/active_alerts_screen.dart';
+import 'screens_admin/user_management_screen.dart';
+import 'screens_admin/reports_analytics_screen.dart';
+import 'screens_admin/broadcast_alert_screen.dart';
+import 'screens_admin/account_settings_screen.dart';
+import 'screens_admin/help_support_screen.dart';
+import 'screens_admin/faqs_screen.dart';
+import 'screens_admin/guides_screen.dart';
+import 'screens_admin/notifications_screen.dart';
+
 void main() {
-  runApp(const ResQApp());
+  runApp(const RootApp());
 }
 
-class ResQApp extends StatelessWidget {
-  const ResQApp({super.key});
+class RootApp extends StatelessWidget {
+  const RootApp({super.key});
 
   @override
   Widget build(BuildContext context) {
-    const Color primaryRed = Color(0xFFC82323);
-
-    // Centralized routes map (simple WidgetBuilder)
-    final Map<String, WidgetBuilder> routes = <String, WidgetBuilder>{
-      LandingPage.routeName: (_) => const LandingPage(),
-      LoginPage.routeName: (_) => const LoginPage(),
-      UserLoginPage.routeName: (_) => const UserLoginPage(),
-      RegisterPage.routeName: (_) => const RegisterPage(),
-      DashboardPage.routeName: (_) => const DashboardPage(),
-      EmergencyPage.routeName: (_) => const EmergencyPage(),
-      ProfilePage.routeName: (_) => const ProfilePage(),
-      SettingsPage.routeName: (_) => const SettingsPage(),
-      EmergencyContactsPage.routeName: (_) => const EmergencyContactsPage(),
-      UserGuidePage.routeName: (_) => const UserGuidePage(),
-      HelpInfoPage.routeName: (_) => const HelpInfoPage(),
-      FaqsPage.routeName: (_) => const FaqsPage(),
-      EmergencyTypesPage.routeName: (_) => const EmergencyTypesPage(),
-      ContactUsPage.routeName: (_) => const ContactUsPage(),
-      SafetyTipsPage.routeName: (_) => const SafetyTipsPage(),
-      ChangePasswordPage.routeName: (_) => const ChangePasswordPage(),
-      NotificationsPage.routeName: (_) => const NotificationsPage(),
-    };
-
     return MaterialApp(
       title: 'ResQ Alert',
       debugShowCheckedModeBanner: false,
-      theme: ThemeData(
-        primaryColor: primaryRed,
-        appBarTheme: const AppBarTheme(
-          backgroundColor: primaryRed,
-          foregroundColor: Colors.white,
-          elevation: 0,
-        ),
-        elevatedButtonTheme: ElevatedButtonThemeData(
-          style: ElevatedButton.styleFrom(backgroundColor: primaryRed),
-        ),
-      ),
 
-      // Which page to show first (adjust to LandingPage or LoginPage as you prefer)
-      initialRoute: LandingPage.routeName,
+      // first screen
+      initialRoute: LandingPage.routeName, // e.g. '/landing'
 
-      // Provide the named routes map
-      routes: routes,
+      routes: {
+        // ---------- USER FLOW ----------
+        LandingPage.routeName: (_) => const LandingPage(),
+        LoginPage.routeName: (_) => const LoginPage(),
+        UserLoginPage.routeName: (_) => const UserLoginPage(),
+        RegisterPage.routeName: (_) => const RegisterPage(),
+        DashboardPage.routeName: (_) => const DashboardPage(),
+        EmergencyPage.routeName: (_) => const EmergencyPage(),
+        ProfilePage.routeName: (_) => const ProfilePage(),
+        SettingsPage.routeName: (_) => const SettingsPage(),
+        EmergencyContactsPage.routeName: (_) => const EmergencyContactsPage(),
+        UserGuidePage.routeName: (_) => const UserGuidePage(),
+        HelpInfoPage.routeName: (_) => const HelpInfoPage(),
+        FaqsPage.routeName: (_) => const FaqsPage(),
+        EmergencyTypesPage.routeName: (_) => const EmergencyTypesPage(),
+        ContactUsPage.routeName: (_) => const ContactUsPage(),
+        SafetyTipsPage.routeName: (_) => const SafetyTipsPage(),
+        ChangePasswordPage.routeName: (_) => const ChangePasswordPage(),
+        NotificationsPage.routeName: (_) => const NotificationsPage(),
 
-      // Universal smooth fade+slide transition for all named routes (keeps pushNamed behavior)
-      onGenerateRoute: (RouteSettings settings) {
-        final name = settings.name;
-        final WidgetBuilder? builder = routes[name];
+        // ---------- ADMIN FLOW ----------
+        // admin login uses its own routeName (static const in LoginScreen)
+        LoginScreen.routeName: (_) => const LoginScreen(), // '/admin-login'
 
-        // If route is not registered, return null (lets Flutter fallback or throw)
-        if (builder == null) return null;
-
-        return PageRouteBuilder(
-          settings: settings,
-          pageBuilder: (context, animation, secondaryAnimation) =>
-              builder(context),
-          transitionDuration: const Duration(milliseconds: 360),
-          transitionsBuilder: (context, animation, secondaryAnimation, child) {
-            // combine fade & subtle slide from the right
-            final fade =
-                CurvedAnimation(parent: animation, curve: Curves.easeInOut);
-            final offsetAnim =
-                Tween<Offset>(begin: const Offset(0.08, 0.0), end: Offset.zero)
-                    .chain(CurveTween(curve: Curves.easeInOut))
-                    .animate(animation);
-
-            return FadeTransition(
-                opacity: fade,
-                child: SlideTransition(position: offsetAnim, child: child));
-          },
-        );
+        // admin dashboard + admin pages (all lowercase, hyphenated)
+        '/Dashboard': (_) => const DashboardScreen(),
+        '/Active Alerts': (_) => const ActiveAlertsScreen(),
+        '/User Management': (_) => const UserManagementScreen(),
+        '/Reports & Analytics': (_) => const ReportsAnalyticsScreen(),
+        '/admin/broadcast': (_) => const BroadcastAlertScreen(),
+        '/Account Settings': (_) => const AccountSettingsScreen(),
+        '/Help & Support': (_) => const HelpSupportScreen(),
+        '/FAQs': (_) => const FaqsScreen(),
+        '/Guides': (_) => const GuidesScreen(),
+        '/Notifications': (_) => const NotificationsScreen(),
       },
     );
   }

@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
-import 'user_login_page.dart'; // Import user login page
+import 'user_login_page.dart';
+import '../screens_admin/login_screen.dart';
 
 class LoginPage extends StatelessWidget {
-  static const routeName = '/login';
+  static const String routeName = '/login';
+
   const LoginPage({super.key});
 
   @override
@@ -20,16 +22,14 @@ class LoginPage extends StatelessWidget {
               children: [
                 const SizedBox(height: 30),
 
-                // App logo placeholder
                 Image.asset(
                   'assets/RQ.png',
                   width: 120,
                   height: 120,
                   errorBuilder: (context, error, stackTrace) => const Icon(
-                    Icons.image_not_supported,
-                    size: 100,
-                    color: Colors.grey,
-                  ),
+                      Icons.image_not_supported,
+                      size: 100,
+                      color: Colors.grey),
                 ),
 
                 const SizedBox(height: 20),
@@ -46,13 +46,16 @@ class LoginPage extends StatelessWidget {
 
                 const SizedBox(height: 60),
 
-                // 🔹 USER Button
+                // USER button
                 SizedBox(
                   width: double.infinity,
                   height: 50,
                   child: ElevatedButton(
                     onPressed: () {
-                      Navigator.pushNamed(context, UserLoginPage.routeName);
+                      Navigator.pushNamed(
+                        context,
+                        UserLoginPage.routeName, // e.g. '/user-login'
+                      );
                     },
                     style: ElevatedButton.styleFrom(
                       backgroundColor: red,
@@ -74,16 +77,15 @@ class LoginPage extends StatelessWidget {
 
                 const SizedBox(height: 20),
 
-                // 🔹 ADMIN Button
+                // ADMIN button
                 SizedBox(
                   width: double.infinity,
                   height: 50,
                   child: ElevatedButton(
                     onPressed: () {
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(
-                          content: Text('Admin login not yet implemented'),
-                        ),
+                      Navigator.pushNamed(
+                        context,
+                        LoginScreen.routeName, // '/admin-login'
                       );
                     },
                     style: ElevatedButton.styleFrom(
@@ -106,17 +108,15 @@ class LoginPage extends StatelessWidget {
 
                 const SizedBox(height: 60),
 
-                // 🔹 WCC logo placeholder
                 Image.asset(
-                  'assets/wcc_logo.png', // Change this later
+                  'assets/wcc_logo.png',
                   width: 120,
                   height: 50,
-                  errorBuilder: (context, error, stackTrace) => const Icon(
-                    Icons.school,
-                    size: 60,
-                    color: Colors.grey,
-                  ),
+                  errorBuilder: (context, error, stackTrace) =>
+                      const Icon(Icons.school, size: 60, color: Colors.grey),
                 ),
+
+                const SizedBox(height: 20),
               ],
             ),
           ),
