@@ -117,8 +117,6 @@ class LoginPage extends StatelessWidget {
                     color: Colors.grey,
                   ),
                 ),
-
-                const SizedBox(height: 20),
               ],
             ),
           ),

@@ -1,4 +1,3 @@
-// lib/main.dart
 import 'package:flutter/material.dart';
 
 // Import all screens you have in lib/screens/
@@ -29,7 +28,6 @@ class ResQApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    // Primary app color used across screens
     const Color primaryRed = Color(0xFFC82323);
 
     // Centralized routes map (simple WidgetBuilder)
