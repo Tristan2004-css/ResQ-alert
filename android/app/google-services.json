@@ -1,0 +1,30 @@
+{
+  "project_info": {
+    "project_number": "693900601684",
+    "firebase_url": "https://navigationdrawerresq-aaff5d43-default-rtdb.firebaseio.com",
+    "project_id": "navigationdrawerresq-aaff5d43",
+    "storage_bucket": "navigationdrawerresq-aaff5d43.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:693900601684:android:d32f352a2947082767c0c1",
+        "android_client_info": {
+          "package_name": "com.example.flutter_application_1"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyCbZ4ILnqVEPGu0S-B3LgCAo8do-cTL-oM"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

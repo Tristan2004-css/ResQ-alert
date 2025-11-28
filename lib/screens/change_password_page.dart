@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 
 class ChangePasswordPage extends StatefulWidget {
   static const routeName = '/change_password';
@@ -9,67 +10,113 @@ class ChangePasswordPage extends StatefulWidget {
 }
 
 class _ChangePasswordPageState extends State<ChangePasswordPage> {
-  final _formKey = GlobalKey<FormState>();
-  final _curr = TextEditingController();
-  final _new = TextEditingController();
-  final _confirm = TextEditingController();
   bool _loading = false;
 
-  @override
-  void dispose() {
-    _curr.dispose();
-    _new.dispose();
-    _confirm.dispose();
-    super.dispose();
-  }
+  Future<void> _sendResetEmail() async {
+    final user = FirebaseAuth.instance.currentUser;
 
-  void _change() {
-    if (!_formKey.currentState!.validate()) return;
+    if (user == null || user.email == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('No logged-in user or email not found.'),
+        ),
+      );
+      return;
+    }
+
+    final email = user.email!;
     setState(() => _loading = true);
-    Future.delayed(const Duration(seconds: 1), () {
-      setState(() => _loading = false);
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Password changed (demo)')));
+
+    try {
+      await FirebaseAuth.instance.sendPasswordResetEmail(email: email);
+
+      if (!mounted) return;
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Password reset email sent to $email'),
+        ),
+      );
+
       Navigator.pop(context);
-    });
+    } on FirebaseAuthException catch (e) {
+      String msg = 'Failed to send reset email.';
+      if (e.message != null) msg = e.message!;
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(msg)),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Error: $e')),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _loading = false);
+    }
   }
 
   @override
   Widget build(BuildContext context) {
     const red = Color(0xFFC82323);
+    final user = FirebaseAuth.instance.currentUser;
+    final email = user?.email ?? 'Unknown';
+
     return Scaffold(
       appBar: AppBar(title: const Text('Change Password')),
       body: SafeArea(
         child: Padding(
           padding: const EdgeInsets.all(16),
           child: SingleChildScrollView(
-            child: Column(children: [
-              Card(
-                child: Padding(
-                  padding: const EdgeInsets.all(12),
-                  child: Column(children: [
-                    const Text('Password Security Tips', style: TextStyle(fontWeight: FontWeight.bold)),
-                    const SizedBox(height: 8),
-                    const Text('Use unique passwords and enable 2FA where possible.'),
-                  ]),
-                ),
-              ),
-              const SizedBox(height: 12),
-              Form(
-                key: _formKey,
-                child: Column(children: [
-                  TextFormField(controller: _curr, decoration: const InputDecoration(labelText: 'Current Password'), obscureText: true, validator: (v) => (v==null || v.isEmpty) ? 'Enter current password' : null),
-                  const SizedBox(height: 12),
-                  TextFormField(controller: _new, decoration: const InputDecoration(labelText: 'New Password'), obscureText: true, validator: (v) => (v==null || v.length<6) ? 'Minimum 6 characters' : null),
-                  const SizedBox(height: 12),
-                  TextFormField(controller: _confirm, decoration: const InputDecoration(labelText: 'Confirm New Password'), obscureText: true, validator: (v) => v != _new.text ? 'Passwords do not match' : null),
-                  const SizedBox(height: 20),
-                  SizedBox(
-                    width: double.infinity,
-                    child: ElevatedButton(onPressed: _loading ? null : _change, style: ElevatedButton.styleFrom(backgroundColor: red), child: _loading ? const CircularProgressIndicator(color: Colors.white) : const Text('Change Password')),
+            child: Column(
+              children: [
+                Card(
+                  child: Padding(
+                    padding: const EdgeInsets.all(12),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        const Text(
+                          'Password Reset via Email',
+                          style: TextStyle(fontWeight: FontWeight.bold),
+                        ),
+                        const SizedBox(height: 8),
+                        Text(
+                          'We will send a password reset link to:\n$email',
+                        ),
+                        const SizedBox(height: 8),
+                        const Text(
+                          'Open the email and follow the instructions to set a new password.',
+                          style: TextStyle(fontSize: 12, color: Colors.black54),
+                        ),
+                      ],
+                    ),
                   ),
-                ]),
-              ),
-            ]),
+                ),
+                const SizedBox(height: 20),
+                SizedBox(
+                  width: double.infinity,
+                  child: ElevatedButton(
+                    onPressed: _loading ? null : _sendResetEmail,
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: red,
+                    ),
+                    child: _loading
+                        ? const SizedBox(
+                            height: 20,
+                            width: 20,
+                            child: CircularProgressIndicator(
+                              color: Colors.white,
+                              strokeWidth: 2,
+                            ),
+                          )
+                        : const Text('Send Reset Email'),
+                  ),
+                ),
+              ],
+            ),
           ),
         ),
       ),

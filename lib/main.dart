@@ -1,10 +1,13 @@
+// lib/main.dart
 import 'package:flutter/material.dart';
+import 'package:firebase_core/firebase_core.dart';
+import 'firebase_options.dart';
 
-// ========== USER SCREENS ==========
+// ================= USER SCREENS =================
 import 'screens/landing_page.dart';
 import 'screens/login_page.dart';
 import 'screens/user_login_page.dart';
-import 'screens/register_page.dart';
+import 'screens/user_register_page.dart';
 import 'screens/dashboard_page.dart';
 import 'screens/emergency_page.dart';
 import 'screens/profile_page.dart';
@@ -18,10 +21,11 @@ import 'screens/contact_us_page.dart';
 import 'screens/safety_tips_page.dart';
 import 'screens/change_password_page.dart';
 import 'screens/notifications_page.dart';
+import 'screens/sms_otp_page.dart';
 
-// ========== ADMIN SCREENS ==========
-import 'screens_admin/login_screen.dart'; // ADMIN login
-import 'screens_admin/dashboard_screen.dart'; // ADMIN dashboard
+// ================= ADMIN SCREENS =================
+import 'screens_admin/login_screen.dart';
+import 'screens_admin/dashboard_screen.dart';
 import 'screens_admin/active_alerts_screen.dart';
 import 'screens_admin/user_management_screen.dart';
 import 'screens_admin/reports_analytics_screen.dart';
@@ -31,8 +35,15 @@ import 'screens_admin/help_support_screen.dart';
 import 'screens_admin/faqs_screen.dart';
 import 'screens_admin/guides_screen.dart';
 import 'screens_admin/notifications_screen.dart';
+import 'screens_admin/user_reports_screen.dart'; // ✅ user reports
 
-void main() {
+Future<void> main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+
+  await Firebase.initializeApp(
+    options: DefaultFirebaseOptions.currentPlatform,
+  );
+
   runApp(const RootApp());
 }
 
@@ -44,16 +55,13 @@ class RootApp extends StatelessWidget {
     return MaterialApp(
       title: 'ResQ Alert',
       debugShowCheckedModeBanner: false,
-
-      // first screen
-      initialRoute: LandingPage.routeName, // e.g. '/landing'
-
+      initialRoute: LandingPage.routeName,
       routes: {
-        // ---------- USER FLOW ----------
+        // -------- USER ROUTES --------
         LandingPage.routeName: (_) => const LandingPage(),
         LoginPage.routeName: (_) => const LoginPage(),
         UserLoginPage.routeName: (_) => const UserLoginPage(),
-        RegisterPage.routeName: (_) => const RegisterPage(),
+        UserRegisterPage.routeName: (_) => const UserRegisterPage(),
         DashboardPage.routeName: (_) => const DashboardPage(),
         EmergencyPage.routeName: (_) => const EmergencyPage(),
         ProfilePage.routeName: (_) => const ProfilePage(),
@@ -67,12 +75,10 @@ class RootApp extends StatelessWidget {
         SafetyTipsPage.routeName: (_) => const SafetyTipsPage(),
         ChangePasswordPage.routeName: (_) => const ChangePasswordPage(),
         NotificationsPage.routeName: (_) => const NotificationsPage(),
+        SmsOtpPage.routeName: (_) => const SmsOtpPage(),
 
-        // ---------- ADMIN FLOW ----------
-        // admin login uses its own routeName (static const in LoginScreen)
-        LoginScreen.routeName: (_) => const LoginScreen(), // '/admin-login'
-
-        // admin dashboard + admin pages (all lowercase, hyphenated)
+        // -------- ADMIN ROUTES --------
+        LoginScreen.routeName: (_) => const LoginScreen(),
         '/Dashboard': (_) => const DashboardScreen(),
         '/Active Alerts': (_) => const ActiveAlertsScreen(),
         '/User Management': (_) => const UserManagementScreen(),
@@ -83,6 +89,9 @@ class RootApp extends StatelessWidget {
         '/FAQs': (_) => const FaqsScreen(),
         '/Guides': (_) => const GuidesScreen(),
         '/Notifications': (_) => const NotificationsScreen(),
+
+        // ✅ NEW: User Reports screen
+        '/admin/user-reports': (_) => const UserReportsScreen(),
       },
     );
   }

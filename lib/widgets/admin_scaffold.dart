@@ -29,25 +29,19 @@ class AdminScaffold extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    // ❌ No WillPopScope here – let back work normally
     return Scaffold(
       appBar: AppBar(
         title: Text(title),
         actions: [
-          IconButton(
-            icon: const Icon(Icons.campaign_outlined),
-            tooltip: 'Broadcast Alert',
-            onPressed: () {
-              // smooth push with default Material animation
-              Navigator.pushNamed(context, '/admin/broadcast');
-            },
-          ),
+          // ⛔️ Broadcast button removed successfully
+
+          // Logout only
           IconButton(
             icon: const Icon(Icons.logout),
             onPressed: () {
               Navigator.pushNamedAndRemoveUntil(
                 context,
-                LoginPage.routeName, // or LandingPage.routeName if you prefer
+                LoginPage.routeName,
                 (_) => false,
               );
             },
@@ -128,12 +122,10 @@ class AdminScaffold extends StatelessWidget {
       ),
       selected: isSelected,
       onTap: () {
-        // close drawer first
         Navigator.of(context).pop();
-
         final currentRoute = ModalRoute.of(context)?.settings.name;
+
         if (currentRoute != route) {
-          // 👇 push (not replace) for smooth transition + back stack
           Navigator.pushNamed(context, route);
         }
       },

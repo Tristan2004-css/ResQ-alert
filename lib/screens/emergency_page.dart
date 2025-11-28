@@ -1,4 +1,7 @@
 import 'package:flutter/material.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_database/firebase_database.dart';
 
 class EmergencyPage extends StatefulWidget {
   static const routeName = '/emergency';
@@ -12,11 +15,68 @@ class _EmergencyPageState extends State<EmergencyPage> {
   String? selected;
   String? floor;
   final detailsCtl = TextEditingController();
+  bool _sending = false;
 
   @override
   void dispose() {
     detailsCtl.dispose();
     super.dispose();
+  }
+
+  Future<void> _sendEmergency() async {
+    if (selected == null) return;
+
+    setState(() => _sending = true);
+
+    try {
+      final auth = FirebaseAuth.instance;
+      final user = auth.currentUser;
+
+      String userId = user?.uid ?? '';
+      String userName = user?.email ?? 'Unknown user';
+      String idNumber = '';
+
+      // Get extra user info from Firestore (name, idNumber)
+      if (user != null) {
+        final doc = await FirebaseFirestore.instance
+            .collection('users')
+            .doc(user.uid)
+            .get();
+
+        final data = doc.data();
+        if (data != null) {
+          userName = (data['name'] ?? userName).toString();
+          idNumber = (data['idNumber'] ?? '').toString();
+        }
+      }
+
+      final ref = FirebaseDatabase.instance.ref('userAlerts').push();
+
+      await ref.set({
+        'userId': userId,
+        'userName': userName,
+        'idNumber': idNumber,
+        'type': selected,
+        'floor': floor ?? '',
+        'details': detailsCtl.text.trim(),
+        'timestamp': ServerValue.timestamp,
+        'status':
+            'active', // admin can update to in_progress / monitoring / resolved
+      });
+
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Emergency alert sent')),
+      );
+      Navigator.pop(context);
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Failed to send emergency: $e')),
+      );
+    } finally {
+      if (mounted) setState(() => _sending = false);
+    }
   }
 
   @override
@@ -53,20 +113,14 @@ class _EmergencyPageState extends State<EmergencyPage> {
               Row(
                 children: [
                   Image.asset(
-                    'assets/logo.png', // 🔲 Replace this with your ResQ logo
+                    'assets/logo.png',
                     width: 35,
                     height: 35,
                   ),
                   const SizedBox(width: 8),
-                  const Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        'ResQ Alert',
-                        style: TextStyle(
-                            fontWeight: FontWeight.bold, fontSize: 18),
-                      ),
-                    ],
+                  const Text(
+                    'ResQ Alert',
+                    style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18),
                   ),
                 ],
               ),
@@ -92,8 +146,9 @@ class _EmergencyPageState extends State<EmergencyPage> {
                         color: isSelected ? Colors.red[50] : Colors.grey[100],
                         borderRadius: BorderRadius.circular(12),
                         border: Border.all(
-                            color: isSelected ? red : Colors.transparent,
-                            width: 1.5),
+                          color: isSelected ? red : Colors.transparent,
+                          width: 1.5,
+                        ),
                       ),
                       child: Column(
                         mainAxisAlignment: MainAxisAlignment.center,
@@ -122,14 +177,20 @@ class _EmergencyPageState extends State<EmergencyPage> {
 
               const SizedBox(height: 20),
               DropdownButtonFormField<String>(
-                // ignore: deprecated_member_use
                 value: floor,
                 hint: const Text('Floor'),
                 decoration: const InputDecoration(
-                    border: OutlineInputBorder(),
-                    contentPadding:
-                        EdgeInsets.symmetric(horizontal: 12, vertical: 8)),
-                items: ['Ground Floor', '1st Floor', '2nd Floor', '3rd Floor']
+                  border: OutlineInputBorder(),
+                  contentPadding:
+                      EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                ),
+                items: const [
+                  'Ground Floor',
+                  '1st Floor',
+                  '2nd Floor',
+                  '3rd Floor',
+                  '4th Floor',
+                ]
                     .map((f) => DropdownMenuItem(value: f, child: Text(f)))
                     .toList(),
                 onChanged: (v) => setState(() => floor = v),
@@ -144,19 +205,13 @@ class _EmergencyPageState extends State<EmergencyPage> {
                 ),
               ),
               const SizedBox(height: 24),
+
               // Send Emergency Button
               SizedBox(
                 width: double.infinity,
                 child: ElevatedButton(
-                  onPressed: selected == null
-                      ? null
-                      : () {
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            const SnackBar(
-                                content: Text('Emergency alert sent (demo)')),
-                          );
-                          Navigator.pop(context);
-                        },
+                  onPressed:
+                      (selected == null || _sending) ? null : _sendEmergency,
                   style: ElevatedButton.styleFrom(
                     backgroundColor: red,
                     padding: const EdgeInsets.symmetric(vertical: 14),
@@ -164,25 +219,36 @@ class _EmergencyPageState extends State<EmergencyPage> {
                       borderRadius: BorderRadius.circular(30),
                     ),
                   ),
-                  child: const Text(
-                    'Send Emergency Alert',
-                    style: TextStyle(color: Colors.white),
-                  ),
+                  child: _sending
+                      ? const SizedBox(
+                          height: 20,
+                          width: 20,
+                          child: CircularProgressIndicator(
+                            color: Colors.white,
+                            strokeWidth: 2,
+                          ),
+                        )
+                      : const Text(
+                          'Send Emergency Alert',
+                          style: TextStyle(color: Colors.white),
+                        ),
                 ),
               ),
               const SizedBox(height: 12),
               SizedBox(
                 width: double.infinity,
                 child: OutlinedButton(
-                  onPressed: () => Navigator.pop(context),
+                  onPressed: _sending ? null : () => Navigator.pop(context),
                   style: OutlinedButton.styleFrom(
                     side: const BorderSide(color: red),
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(30),
                     ),
                   ),
-                  child: const Text('Cancel',
-                      style: TextStyle(color: Colors.black)),
+                  child: const Text(
+                    'Cancel',
+                    style: TextStyle(color: Colors.black),
+                  ),
                 ),
               ),
             ],

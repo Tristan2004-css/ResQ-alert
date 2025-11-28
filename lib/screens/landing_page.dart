@@ -1,9 +1,33 @@
 import 'package:flutter/material.dart';
-import 'login_page.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 
-class LandingPage extends StatelessWidget {
+import 'login_page.dart';
+import 'dashboard_page.dart';
+
+class LandingPage extends StatefulWidget {
   static const routeName = '/';
   const LandingPage({super.key});
+
+  @override
+  State<LandingPage> createState() => _LandingPageState();
+}
+
+class _LandingPageState extends State<LandingPage> {
+  @override
+  void initState() {
+    super.initState();
+    _redirectIfLoggedIn();
+  }
+
+  Future<void> _redirectIfLoggedIn() async {
+    // optional small delay to let splash show briefly
+    await Future.delayed(const Duration(milliseconds: 150));
+    final user = FirebaseAuth.instance.currentUser;
+    if (user != null && mounted) {
+      // Replace route so user can't go back to landing
+      Navigator.pushReplacementNamed(context, DashboardPage.routeName);
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
