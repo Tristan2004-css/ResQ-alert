@@ -3,7 +3,10 @@ import 'package:flutter/material.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'firebase_options.dart';
 
-// ================= USER SCREENS =================
+// ADD THIS ↓↓↓
+import 'screens/my_reports_page.dart';
+
+// (your other imports)
 import 'screens/landing_page.dart';
 import 'screens/login_page.dart';
 import 'screens/user_login_page.dart';
@@ -21,9 +24,8 @@ import 'screens/contact_us_page.dart';
 import 'screens/safety_tips_page.dart';
 import 'screens/change_password_page.dart';
 import 'screens/notifications_page.dart';
-import 'screens/sms_otp_page.dart';
 
-// ================= ADMIN SCREENS =================
+// admin
 import 'screens_admin/login_screen.dart';
 import 'screens_admin/dashboard_screen.dart';
 import 'screens_admin/active_alerts_screen.dart';
@@ -35,7 +37,7 @@ import 'screens_admin/help_support_screen.dart';
 import 'screens_admin/faqs_screen.dart';
 import 'screens_admin/guides_screen.dart';
 import 'screens_admin/notifications_screen.dart';
-import 'screens_admin/user_reports_screen.dart'; // ✅ user reports
+import 'screens_admin/user_reports_screen.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -48,7 +50,7 @@ Future<void> main() async {
 }
 
 class RootApp extends StatelessWidget {
-  const RootApp({super.key});
+  const RootApp({Key? key}) : super(key: key);
 
   @override
   Widget build(BuildContext context) {
@@ -75,7 +77,9 @@ class RootApp extends StatelessWidget {
         SafetyTipsPage.routeName: (_) => const SafetyTipsPage(),
         ChangePasswordPage.routeName: (_) => const ChangePasswordPage(),
         NotificationsPage.routeName: (_) => const NotificationsPage(),
-        SmsOtpPage.routeName: (_) => const SmsOtpPage(),
+
+        // ⭐ ADD THIS (My Reports) ⭐
+        MyReportsPage.routeName: (_) => const MyReportsPage(),
 
         // -------- ADMIN ROUTES --------
         LoginScreen.routeName: (_) => const LoginScreen(),
@@ -89,8 +93,6 @@ class RootApp extends StatelessWidget {
         '/FAQs': (_) => const FaqsScreen(),
         '/Guides': (_) => const GuidesScreen(),
         '/Notifications': (_) => const NotificationsScreen(),
-
-        // ✅ NEW: User Reports screen
         '/admin/user-reports': (_) => const UserReportsScreen(),
       },
     );

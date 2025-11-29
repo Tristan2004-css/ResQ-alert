@@ -1,6 +1,9 @@
 // lib/screens_admin/broadcast_alert_screen.dart
+import 'dart:convert';
+
 import 'package:flutter/material.dart';
 import 'package:firebase_database/firebase_database.dart';
+import 'package:http/http.dart' as http;
 import 'package:resq_alert/widgets/admin_scaffold.dart';
 
 class BroadcastAlertScreen extends StatefulWidget {
@@ -15,6 +18,12 @@ class _BroadcastAlertScreenState extends State<BroadcastAlertScreen> {
 
   // Realtime Database ref for alerts
   final DatabaseReference _alertsRef = FirebaseDatabase.instance.ref('alerts');
+
+  // ==== Configure these with values from your OneSignal dashboard ====
+  // Replace with your actual OneSignal App ID and REST API Key
+  static const String oneSignalAppId = 'cf36124d-02de-47d4-a0be-6753b33bb28c';
+  static const String oneSignalRestKey = 'm2y3c3dibuh4eladafmgxajdx';
+  // ==================================================================
 
   // ===== EMERGENCY CATEGORIES & TYPES =====
   static const Map<String, List<String>> emergencyMap = {
@@ -230,8 +239,64 @@ class _BroadcastAlertScreenState extends State<BroadcastAlertScreen> {
   // Whether building dropdown is locked (auto-selected) because of target
   bool _isBuildingLocked = false;
 
+  // ---------- SEND PUSH via OneSignal REST API ----------
+  Future<void> sendPushNotification({
+    required String title,
+    required String body,
+    String? segment, // if you want to target "All", "SHS", "College" later
+  }) async {
+    if (oneSignalAppId == 'YOUR_ONESIGNAL_APP_ID' ||
+        oneSignalRestKey == 'YOUR_ONESIGNAL_REST_API_KEY') {
+      debugPrint(
+          'OneSignal keys not set. Skipping push send (set your keys first).');
+      return;
+    }
+
+    final uri = Uri.parse('https://onesignal.com/api/v1/notifications');
+
+    // By default we broadcast to All. If in future you tag users, you can
+    // send to segments or filter by tags (see OneSignal docs).
+    final payload = <String, dynamic>{
+      'app_id': oneSignalAppId,
+      // simple: send to all subscribers (change if you implement tags)
+      'included_segments': ['All'],
+      'headings': {'en': title},
+      'contents': {'en': body},
+      // optionally add data for deep linking inside app
+      'data': {
+        'category': selectedCategory ?? '',
+        'emergency': selectedEmergency ?? '',
+        'building': selectedBuilding ?? '',
+        'floor': selectedFloor ?? '',
+        'room': selectedRoom ?? '',
+      },
+      'android_channel_id': null, // optionally set channel id
+    };
+
+    try {
+      final res = await http.post(
+        uri,
+        headers: {
+          'Content-Type': 'application/json; charset=utf-8',
+          'Authorization': 'Basic $oneSignalRestKey',
+        },
+        body: jsonEncode(payload),
+      );
+
+      if (res.statusCode >= 200 && res.statusCode < 300) {
+        debugPrint('OneSignal push sent (status ${res.statusCode})');
+      } else {
+        debugPrint(
+            'Failed to send OneSignal push: ${res.statusCode} ${res.body}');
+      }
+    } catch (e) {
+      debugPrint('Exception sending OneSignal push: $e');
+    }
+  }
+
   Future<void> _send() async {
     if (selectedCategory == null || selectedEmergency == null) {
+      if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Please select an emergency type.')),
       );
@@ -241,6 +306,7 @@ class _BroadcastAlertScreenState extends State<BroadcastAlertScreen> {
     if (selectedBuilding == null ||
         selectedFloor == null ||
         selectedRoom == null) {
+      if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
           content: Text('Please select building, floor and room.'),
@@ -250,6 +316,7 @@ class _BroadcastAlertScreenState extends State<BroadcastAlertScreen> {
     }
 
     if (message.text.trim().isEmpty) {
+      if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Please enter a short alert message.')),
       );
@@ -257,7 +324,9 @@ class _BroadcastAlertScreenState extends State<BroadcastAlertScreen> {
     }
 
     try {
-      await _alertsRef.push().set({
+      // Save to RTDB
+      final newRef = _alertsRef.push();
+      await newRef.set({
         'category': selectedCategory,
         'emergency': selectedEmergency,
         'building': selectedBuilding,
@@ -269,12 +338,21 @@ class _BroadcastAlertScreenState extends State<BroadcastAlertScreen> {
         'target': selectedTarget, // <-- audience included here
       });
 
+      // Fire push notification via OneSignal REST API
+      final title = '🚨 ${selectedEmergency ?? 'Emergency'}';
+      final body =
+          '${message.text.trim()} • ${selectedBuilding ?? ''} ${selectedFloor != null ? "• $selectedFloor" : ""}';
+
+      await sendPushNotification(title: title, body: body);
+
+      if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Emergency broadcast sent.')),
       );
 
       message.clear();
     } catch (e) {
+      if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text('Failed to send alert: $e')),
       );

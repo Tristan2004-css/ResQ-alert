@@ -1,7 +1,6 @@
 // lib/screens/notifications_page.dart
 import 'package:flutter/material.dart';
 import 'package:firebase_database/firebase_database.dart';
-import 'package:firebase_auth/firebase_auth.dart';
 
 class NotificationsPage extends StatefulWidget {
   static const routeName = '/notifications';
@@ -28,16 +27,17 @@ class _NotificationsPageState extends State<NotificationsPage>
   }
 
   Color _statusColor(String status) {
-    final s = (status).toString().toLowerCase();
-    if (s == 'active') return Colors.red;
+    final s = status.toString().toLowerCase();
+    if (s == 'active' || s == 'critical') return Colors.red;
     if (s == 'in_progress' || s == 'in-progress' || s == 'in progress')
       return Colors.orange;
-    if (s == 'resolved') return Colors.green;
+    if (s == 'monitoring') return Colors.blue;
+    if (s == 'resolved' || s == 'closed') return Colors.green;
     return Colors.grey;
   }
 
-  // Convert RTDB snapshot children to list of maps (most recent first)
-  List<Map<String, dynamic>> _itemsFromSnapshot(DatabaseEvent event) {
+  // Convert RTDB /alerts snapshot children to list of maps (most recent first)
+  List<Map<String, dynamic>> _itemsFromAlertsSnapshot(DatabaseEvent event) {
     final snap = event.snapshot;
     if (snap.value == null) return [];
     final map = Map<dynamic, dynamic>.from(snap.value as Map);
@@ -45,16 +45,18 @@ class _NotificationsPageState extends State<NotificationsPage>
     for (final entry in map.entries) {
       final rec = Map<String, dynamic>.from(entry.value as Map);
       rec['key'] = entry.key;
-      // ensure status and type exist
+      // normalize fields
       rec['status'] = (rec['status'] ?? 'active').toString();
-      rec['type'] = (rec['type'] ?? rec['emergency'] ?? 'Alert').toString();
-      rec['desc'] = (rec['details'] ??
-              rec['message'] ??
+      rec['type'] =
+          (rec['category'] ?? rec['emergency'] ?? 'Broadcast Alert').toString();
+      rec['desc'] = (rec['message'] ??
+              rec['details'] ??
               rec['description'] ??
               rec['desc'] ??
               '')
           .toString();
-      // timestamp -> readable
+
+      // timestamp -> readable (handle int/double)
       final ts = rec['timestamp'];
       if (ts is int || ts is double) {
         final ms = ts is double ? ts.toInt() : ts as int;
@@ -64,14 +66,30 @@ class _NotificationsPageState extends State<NotificationsPage>
       } else {
         rec['timeStr'] = rec['timeStr'] ?? '';
       }
+
+      // prefer numeric timestamp normalized to int if possible (used for sorting)
+      if (ts is int) {
+        rec['timestamp'] = ts;
+      } else if (ts is double) {
+        rec['timestamp'] = ts.toInt();
+      } else {
+        // fallback: set 0 so it goes to the end
+        rec['timestamp'] = rec['timestamp'] ?? 0;
+      }
+
+      // keep target if present (useful for debugging)
+      rec['target'] = (rec['target'] ?? '').toString();
+
       items.add(rec);
     }
+
     // sort newest first by timestamp if available
     items.sort((a, b) {
       final at = (a['timestamp'] ?? 0) as num;
       final bt = (b['timestamp'] ?? 0) as num;
       return bt.compareTo(at);
     });
+
     return items;
   }
 
@@ -79,23 +97,8 @@ class _NotificationsPageState extends State<NotificationsPage>
   Widget build(BuildContext context) {
     const red = Color(0xFFC82323);
 
-    final user = FirebaseAuth.instance.currentUser;
-    final uid = user?.uid;
-
-    // If not logged in, show friendly message
-    if (uid == null) {
-      return Scaffold(
-        appBar: AppBar(title: const Text('Notifications')),
-        body: const Center(
-          child: Text('Please log in to view your notifications.'),
-        ),
-      );
-    }
-
-    final dbRef = FirebaseDatabase.instance
-        .ref('userAlerts')
-        .orderByChild('userId')
-        .equalTo(uid);
+    final alertsRef =
+        FirebaseDatabase.instance.ref('alerts').orderByChild('timestamp');
 
     return Scaffold(
       appBar: AppBar(
@@ -116,10 +119,10 @@ class _NotificationsPageState extends State<NotificationsPage>
               ],
             ),
 
-            // StreamBuilder reads the user's alerts once and we filter per tab
+            // StreamBuilder reads /alerts only
             Expanded(
               child: StreamBuilder<DatabaseEvent>(
-                stream: dbRef.onValue,
+                stream: alertsRef.onValue,
                 builder: (context, snapshot) {
                   if (snapshot.connectionState == ConnectionState.waiting) {
                     return const Center(child: CircularProgressIndicator());
@@ -134,26 +137,86 @@ class _NotificationsPageState extends State<NotificationsPage>
                   }
 
                   final items = snapshot.hasData
-                      ? _itemsFromSnapshot(snapshot.data!)
+                      ? _itemsFromAlertsSnapshot(snapshot.data!)
                       : <Map<String, dynamic>>[];
 
-                  // Build filtered lists
-                  final all = items;
-                  final active = items.where((m) {
+                  // Filtered lists:
+                  final allNonResolved = items.where((m) {
                     final s = (m['status'] ?? '').toString().toLowerCase();
-                    return s == 'active';
-                  }).toList();
-                  final history = items.where((m) {
-                    final s = (m['status'] ?? '').toString().toLowerCase();
-                    return s == 'resolved';
+                    return s != 'resolved' && s != 'closed';
                   }).toList();
 
-                  return TabBarView(
-                    controller: _tc,
+                  final activeList = items.where((m) {
+                    final s = (m['status'] ?? '').toString().toLowerCase();
+                    return s == 'active' ||
+                        s == 'critical' ||
+                        s == 'in_progress' ||
+                        s == 'in-progress' ||
+                        s == 'in progress' ||
+                        s == 'monitoring';
+                  }).toList();
+
+                  final historyList = items.where((m) {
+                    final s = (m['status'] ?? '').toString().toLowerCase();
+                    return s == 'resolved' || s == 'closed';
+                  }).toList();
+
+                  // --- COUNTS FOR BADGES (live)
+                  final totalCount = items.length;
+                  final activeCount = activeList.length;
+                  final inProgressCount = items.where((m) {
+                    final s = (m['status'] ?? '').toString().toLowerCase();
+                    return s == 'in_progress' ||
+                        s == 'in-progress' ||
+                        s == 'in progress';
+                  }).length;
+                  final monitoringCount = items.where((m) {
+                    final s = (m['status'] ?? '').toString().toLowerCase();
+                    return s == 'monitoring';
+                  }).length;
+                  final resolvedCount = historyList.length;
+
+                  // Build the UI with counts + debug section + tab views
+                  return Column(
                     children: [
-                      _listView(all),
-                      _listView(active),
-                      _listView(history),
+                      // counts row
+                      Padding(
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 12, vertical: 8),
+                        child: SingleChildScrollView(
+                          scrollDirection: Axis.horizontal,
+                          child: Row(
+                            children: [
+                              _countChip('Total', totalCount, Colors.grey),
+                              const SizedBox(width: 8),
+                              _countChip('Active', activeCount, Colors.red),
+                              const SizedBox(width: 8),
+                              _countChip('In-Progress', inProgressCount,
+                                  Colors.orange),
+                              const SizedBox(width: 8),
+                              _countChip(
+                                  'Monitoring', monitoringCount, Colors.blue),
+                              const SizedBox(width: 8),
+                              _countChip(
+                                  'Resolved', resolvedCount, Colors.green),
+                            ],
+                          ),
+                        ),
+                      ),
+                      // main tab content (fills remaining vertical space)
+                      Expanded(
+                        child: TabBarView(
+                          controller: _tc,
+                          children: [
+                            // All (non-resolved)
+                            _boxedListView(allNonResolved),
+                            // Active
+                            _boxedListView(activeList),
+                            // History (resolved/closed)
+                            _boxedListView(historyList),
+                          ],
+                        ),
+                      ),
                     ],
                   );
                 },
@@ -165,7 +228,8 @@ class _NotificationsPageState extends State<NotificationsPage>
     );
   }
 
-  Widget _listView(List<Map<String, dynamic>> items) {
+  // Build the boxed (card) list view for the given list
+  Widget _boxedListView(List<Map<String, dynamic>> items) {
     if (items.isEmpty) {
       return const Center(child: Text('No notifications'));
     }
@@ -177,7 +241,6 @@ class _NotificationsPageState extends State<NotificationsPage>
       itemBuilder: (context, i) {
         final it = items[i];
         final statusRaw = (it['status'] ?? 'active').toString();
-        statusRaw.toLowerCase();
         final statusColor = _statusColor(statusRaw);
 
         final title = (it['type'] ?? it['emergency'] ?? 'Alert').toString();
@@ -228,10 +291,7 @@ class _NotificationsPageState extends State<NotificationsPage>
 
               // Description
               if (desc.isNotEmpty)
-                Text(
-                  desc,
-                  style: const TextStyle(color: Colors.black54),
-                ),
+                Text(desc, style: const TextStyle(color: Colors.black54)),
 
               const SizedBox(height: 8),
 
@@ -239,13 +299,12 @@ class _NotificationsPageState extends State<NotificationsPage>
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  Text(
-                    timeStr,
-                    style: const TextStyle(fontSize: 12, color: Colors.black45),
-                  ),
-                  // Optionally: a view button to open full report (left empty for now)
+                  Text(timeStr,
+                      style:
+                          const TextStyle(fontSize: 12, color: Colors.black45)),
                   TextButton(
                     onPressed: () {
+                      // show full details dialog
                       showDialog(
                         context: context,
                         builder: (ctx) {
@@ -278,6 +337,19 @@ class _NotificationsPageState extends State<NotificationsPage>
           ),
         );
       },
+    );
+  }
+
+  // small helper to create a count chip
+  Widget _countChip(String label, int count, Color color) {
+    return Chip(
+      backgroundColor: color.withOpacity(0.12),
+      avatar: CircleAvatar(
+        backgroundColor: color,
+        child: Text(count.toString(),
+            style: const TextStyle(color: Colors.white, fontSize: 12)),
+      ),
+      label: Text(label),
     );
   }
 }

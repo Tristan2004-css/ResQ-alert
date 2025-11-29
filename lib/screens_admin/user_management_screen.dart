@@ -102,9 +102,12 @@ class _UserManagementScreenState extends State<UserManagementScreen> {
 
                 final allDocs = snapshot.data!.docs;
 
-                // Map to user objects
-                final allUsers =
-                    allDocs.map((d) => _UserRecord.fromDoc(d)).toList();
+                // Map to user objects and sort alphabetically (case-insensitive)
+                final allUsers = allDocs
+                    .map((d) => _UserRecord.fromDoc(d))
+                    .toList()
+                  ..sort((a, b) =>
+                      a.name.toLowerCase().compareTo(b.name.toLowerCase()));
 
                 // Filter by role
                 List<_UserRecord> filtered = allUsers.where((u) {

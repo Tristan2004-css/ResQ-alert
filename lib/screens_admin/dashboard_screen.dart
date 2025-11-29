@@ -177,10 +177,11 @@ class DashboardScreen extends StatelessWidget {
             ),
             const SizedBox(height: 10),
 
-            // ======= RECENT EMERGENCIES (LIST FROM RTDB) =======
+            // ======= RECENT EMERGENCIES (LIST FROM RTDB) - redesigned:
+            // shows a fixed-height box that fits ~3 cards and is scrollable.
             StreamBuilder<DatabaseEvent>(
               stream:
-                  _alertsRef.orderByChild('timestamp').limitToLast(5).onValue,
+                  _alertsRef.orderByChild('timestamp').limitToLast(20).onValue,
               builder: (context, snapshot) {
                 if (snapshot.connectionState == ConnectionState.waiting) {
                   return const Center(
@@ -228,12 +229,54 @@ class DashboardScreen extends StatelessWidget {
                 alerts.sort((a, b) =>
                     (b['timestamp'] ?? 0).compareTo(a['timestamp'] ?? 0));
 
-                return Column(
-                  children: alerts
-                      .map((a) => _AlertTile(
+                // Keep non-resolved on Recent Emergencies (resolved may be shown elsewhere)
+                final activeAlerts = alerts.where((a) {
+                  final s = (a['status'] ?? '').toString().toLowerCase();
+                  return s != 'resolved' && s != 'closed';
+                }).toList();
+
+                if (activeAlerts.isEmpty) {
+                  return const Padding(
+                    padding: EdgeInsets.all(8.0),
+                    child: Text('No active recent emergencies.',
+                        style: TextStyle(color: Colors.black54, fontSize: 13)),
+                  );
+                }
+
+                // approximate height so ~3 tiles fit (adjust singleHeight if your tile is taller)
+                const double singleTileHeight = 120;
+                final double listHeight = singleTileHeight * 3;
+
+                return Container(
+                  // visually box the list like on admin screenshot
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(color: Colors.black12),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black.withOpacity(0.02),
+                        blurRadius: 6,
+                      )
+                    ],
+                  ),
+                  padding: const EdgeInsets.all(8),
+                  child: SizedBox(
+                    height: listHeight,
+                    child: ListView.builder(
+                      itemCount: activeAlerts.length,
+                      padding: const EdgeInsets.symmetric(vertical: 6),
+                      itemBuilder: (ctx, idx) {
+                        final a = activeAlerts[idx];
+                        return Padding(
+                          padding: const EdgeInsets.only(bottom: 8.0),
+                          child: _AlertTile(
                             data: a,
-                          ))
-                      .toList(),
+                          ),
+                        );
+                      },
+                    ),
+                  ),
                 );
               },
             ),
@@ -368,7 +411,7 @@ class _AlertTile extends StatelessWidget {
   const _AlertTile({required this.data});
 
   Color _statusColor(String status) {
-    switch (status.toUpperCase()) {
+    switch (status.toString().toUpperCase()) {
       case "CRITICAL":
         return Colors.red;
       case "ACTIVE":
@@ -384,6 +427,27 @@ class _AlertTile extends StatelessWidget {
     }
   }
 
+  String _formatTimestamp(dynamic ts) {
+    try {
+      if (ts == null) return '';
+      int ms;
+      if (ts is int) {
+        ms = ts;
+      } else if (ts is double) {
+        ms = ts.toInt();
+      } else if (ts is String) {
+        ms = int.tryParse(ts) ?? 0;
+      } else {
+        return '';
+      }
+      if (ms == 0) return '';
+      final dt = DateTime.fromMillisecondsSinceEpoch(ms);
+      return "${dt.year}-${dt.month.toString().padLeft(2, '0')}-${dt.day.toString().padLeft(2, '0')} ${dt.hour.toString().padLeft(2, '0')}:${dt.minute.toString().padLeft(2, '0')}";
+    } catch (_) {
+      return '';
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final emergency = (data['emergency'] ?? 'Emergency').toString();
@@ -392,6 +456,13 @@ class _AlertTile extends StatelessWidget {
     final room = (data['room'] ?? '').toString();
     final floor = (data['floor'] ?? '').toString();
     final status = (data['status'] ?? 'ACTIVE').toString().toUpperCase();
+    final message = (data['message'] ??
+            data['details'] ??
+            data['msg'] ??
+            data['description'] ??
+            '')
+        .toString();
+    final timestamp = data['timestamp'];
 
     // Build full location string
     String locationLine = '';
@@ -415,6 +486,7 @@ class _AlertTile extends StatelessWidget {
     final subtitleText = '$emergency\n$locationLine';
 
     final statusColor = _statusColor(status);
+    final timeText = _formatTimestamp(timestamp);
 
     return Card(
       margin: const EdgeInsets.only(bottom: 8),
@@ -427,9 +499,36 @@ class _AlertTile extends StatelessWidget {
           titleText,
           style: const TextStyle(fontWeight: FontWeight.w600),
         ),
-        subtitle: Text(
-          subtitleText,
-          style: const TextStyle(fontSize: 12),
+        subtitle: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const SizedBox(height: 6),
+            Text(
+              subtitleText,
+              style: const TextStyle(fontSize: 12),
+            ),
+            if (message.isNotEmpty) ...[
+              const SizedBox(height: 8),
+              Container(
+                width: double.infinity,
+                padding: const EdgeInsets.all(8),
+                decoration: BoxDecoration(
+                  color: Colors.grey.shade100,
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: Text(
+                  message,
+                  style: const TextStyle(fontSize: 13, color: Colors.black87),
+                ),
+              ),
+            ],
+            const SizedBox(height: 6),
+            if (timeText.isNotEmpty)
+              Text(
+                timeText,
+                style: const TextStyle(fontSize: 11, color: Colors.black45),
+              ),
+          ],
         ),
         trailing: FittedBox(
           fit: BoxFit.scaleDown,

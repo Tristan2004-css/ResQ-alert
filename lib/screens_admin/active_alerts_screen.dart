@@ -272,6 +272,25 @@ class _AlertCard extends StatelessWidget {
     );
   }
 
+  String _formatTimestamp(dynamic ts) {
+    try {
+      if (ts == null) return '';
+      int ms;
+      if (ts is int)
+        ms = ts;
+      else if (ts is double)
+        ms = ts.toInt();
+      else if (ts is String)
+        ms = int.tryParse(ts) ?? 0;
+      else
+        return '';
+      final dt = DateTime.fromMillisecondsSinceEpoch(ms);
+      return "${dt.year}-${dt.month.toString().padLeft(2, '0')}-${dt.day.toString().padLeft(2, '0')} ${dt.hour.toString().padLeft(2, '0')}:${dt.minute.toString().padLeft(2, '0')}";
+    } catch (_) {
+      return '';
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final type = (data['type'] ?? data['emergency'] ?? 'Emergency').toString();
@@ -279,8 +298,11 @@ class _AlertCard extends StatelessWidget {
     final floor = (data['floor'] ?? '').toString();
     final room = (data['room'] ?? '').toString();
     final status = (data['status'] ?? 'ACTIVE').toString().toUpperCase();
-    final timeText = (data['time'] ?? '').toString(); // optional
+    final timeText = data['timestamp'] != null
+        ? _formatTimestamp(data['timestamp'])
+        : (data['time'] ?? '').toString();
     final target = (data['target'] ?? '').toString();
+    final message = (data['message'] ?? data['details'] ?? '').toString();
 
     String subtitle = '';
     if (target.isNotEmpty) subtitle += '$target · ';
@@ -290,44 +312,134 @@ class _AlertCard extends StatelessWidget {
     if (timeText.isNotEmpty) subtitle += ' · $timeText';
     if (subtitle.isEmpty) subtitle = 'Location not specified';
 
+    final color = _statusColor(status);
+
     return Card(
-      margin: const EdgeInsets.only(bottom: 10),
+      margin: const EdgeInsets.only(bottom: 14),
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-      child: ListTile(
-        leading: CircleAvatar(
-          backgroundColor: _statusColor(status).withOpacity(.15),
-          child: Icon(Icons.warning, color: _statusColor(status)),
-        ),
-        title: Text(
-          type,
-          style: const TextStyle(fontWeight: FontWeight.bold),
-        ),
-        subtitle: Text(subtitle),
-        trailing: Row(
-          mainAxisSize: MainAxisSize.min,
+      elevation: 2,
+      child: InkWell(
+        borderRadius: BorderRadius.circular(12),
+        onTap: () => _showStatusSheet(context),
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            GestureDetector(
-              onTap: () => _showStatusSheet(context),
-              child: Chip(
-                label: Text(
-                  status,
-                  style: const TextStyle(
-                    fontSize: 11,
-                    fontWeight: FontWeight.bold,
-                  ),
+            // Left colored accent
+            Container(
+              width: 6,
+              height: 120,
+              decoration: BoxDecoration(
+                color: color,
+                borderRadius: const BorderRadius.only(
+                  topLeft: Radius.circular(12),
+                  bottomLeft: Radius.circular(12),
                 ),
-                backgroundColor: _statusColor(status).withOpacity(.12),
-                side: BorderSide(color: _statusColor(status)),
               ),
             ),
-            const SizedBox(width: 8),
-            IconButton(
-              icon: const Icon(Icons.more_vert),
-              onPressed: () => _showMoreOptions(context),
+
+            // Main content
+            Expanded(
+              child: Padding(
+                padding:
+                    const EdgeInsets.symmetric(vertical: 12, horizontal: 14),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    // Title + optional target badge
+                    Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Expanded(
+                          child: Text(
+                            type,
+                            style: const TextStyle(
+                              fontWeight: FontWeight.bold,
+                              fontSize: 16,
+                            ),
+                          ),
+                        ),
+                        const SizedBox(width: 8),
+                        // Status pill
+                        Container(
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 10, vertical: 6),
+                          decoration: BoxDecoration(
+                            color: color.withOpacity(0.12),
+                            borderRadius: BorderRadius.circular(16),
+                          ),
+                          child: Text(
+                            status,
+                            style: TextStyle(
+                              color: color,
+                              fontWeight: FontWeight.bold,
+                              fontSize: 12,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+
+                    const SizedBox(height: 8),
+
+                    // subtitle / location
+                    Text(
+                      subtitle,
+                      style:
+                          const TextStyle(fontSize: 13, color: Colors.black54),
+                    ),
+
+                    if (message.isNotEmpty) ...[
+                      const SizedBox(height: 10),
+                      Container(
+                        width: double.infinity,
+                        padding: const EdgeInsets.all(10),
+                        decoration: BoxDecoration(
+                          color: Colors.grey.shade100,
+                          borderRadius: BorderRadius.circular(8),
+                          border: Border.all(color: Colors.grey.shade200),
+                        ),
+                        child: Text(
+                          message,
+                          maxLines: 3,
+                          overflow: TextOverflow.ellipsis,
+                          style: const TextStyle(
+                              fontSize: 13, color: Colors.black87),
+                        ),
+                      ),
+                    ],
+
+                    const SizedBox(height: 10),
+
+                    // Actions row: quick status button + menu
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.end,
+                      children: [
+                        TextButton.icon(
+                          onPressed: () => _showStatusSheet(context),
+                          icon: Icon(Icons.change_circle, color: color),
+                          label: Text('Change status',
+                              style: TextStyle(color: color)),
+                        ),
+                        const SizedBox(width: 8),
+                        IconButton(
+                          tooltip: 'More',
+                          icon: const Icon(Icons.more_vert),
+                          onPressed: () => _showMoreOptions(context),
+                        ),
+                        IconButton(
+                          tooltip: 'Delete',
+                          icon:
+                              const Icon(Icons.delete, color: Colors.redAccent),
+                          onPressed: () => onDelete(),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
             ),
           ],
         ),
-        onTap: () => _showStatusSheet(context),
       ),
     );
   }
