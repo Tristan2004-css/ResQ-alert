@@ -1,0 +1,36 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:id="@+id/overlayRoot"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:orientation="vertical"
+    android:background="@drawable/overlay_bg"
+    android:padding="16dp"
+    android:elevation="8dp">
+
+    <TextView
+        android:id="@+id/overlayTitle"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="Alert"
+        android:textAppearance="?android:attr/textAppearanceLarge"
+        android:textStyle="bold"
+        android:textColor="#ffffff" />
+
+    <TextView
+        android:id="@+id/overlayBody"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="Details..."
+        android:textColor="#ffffff"
+        android:layout_marginTop="8dp" />
+
+    <Button
+        android:id="@+id/overlayDismiss"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="Dismiss"
+        android:layout_gravity="end"
+        android:layout_marginTop="8dp" />
+
+</LinearLayout>

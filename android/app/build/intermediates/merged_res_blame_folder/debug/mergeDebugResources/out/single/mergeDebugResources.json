@@ -1,0 +1,38 @@
+[
+    {
+        "merged": "com.example.flutter_application_1.app-debug-67:/mipmap-xhdpi_ic_launcher.png.flat",
+        "source": "com.example.flutter_application_1.app-main-69:/mipmap-xhdpi/ic_launcher.png"
+    },
+    {
+        "merged": "com.example.flutter_application_1.app-debug-67:/raw_alarm.mp3.flat",
+        "source": "com.example.flutter_application_1.app-main-69:/raw/alarm.mp3"
+    },
+    {
+        "merged": "com.example.flutter_application_1.app-debug-67:/mipmap-hdpi_ic_launcher.png.flat",
+        "source": "com.example.flutter_application_1.app-main-69:/mipmap-hdpi/ic_launcher.png"
+    },
+    {
+        "merged": "com.example.flutter_application_1.app-debug-67:/drawable-v21_launch_background.xml.flat",
+        "source": "com.example.flutter_application_1.app-main-69:/drawable-v21/launch_background.xml"
+    },
+    {
+        "merged": "com.example.flutter_application_1.app-debug-67:/layout_view_overlay_alert.xml.flat",
+        "source": "com.example.flutter_application_1.app-main-69:/layout/view_overlay_alert.xml"
+    },
+    {
+        "merged": "com.example.flutter_application_1.app-debug-67:/mipmap-mdpi_ic_launcher.png.flat",
+        "source": "com.example.flutter_application_1.app-main-69:/mipmap-mdpi/ic_launcher.png"
+    },
+    {
+        "merged": "com.example.flutter_application_1.app-debug-67:/mipmap-xxhdpi_ic_launcher.png.flat",
+        "source": "com.example.flutter_application_1.app-main-69:/mipmap-xxhdpi/ic_launcher.png"
+    },
+    {
+        "merged": "com.example.flutter_application_1.app-debug-67:/drawable_overlay_bg.xml.flat",
+        "source": "com.example.flutter_application_1.app-main-69:/drawable/overlay_bg.xml"
+    },
+    {
+        "merged": "com.example.flutter_application_1.app-debug-67:/mipmap-xxxhdpi_ic_launcher.png.flat",
+        "source": "com.example.flutter_application_1.app-main-69:/mipmap-xxxhdpi/ic_launcher.png"
+    }
+]

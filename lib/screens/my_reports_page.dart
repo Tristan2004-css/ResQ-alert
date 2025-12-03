@@ -41,22 +41,41 @@ class MyReportsPage extends StatelessWidget {
                     return const Center(child: Text('No reports yet.'));
                   }
 
-                  // Filter for current user's reports and convert to list
+                  // Safely iterate children to collect current user's reports
                   final allChildren = snap.children.toList();
-                  final List<DataSnapshot> mine = allChildren.where((c) {
-                    final map = (c.value ?? {}) as Map<dynamic, dynamic>;
-                    final ruid = map['userId'];
-                    return ruid != null && ruid.toString() == uid;
-                  }).toList();
+                  final List<DataSnapshot> mine = [];
+
+                  for (final child in allChildren) {
+                    try {
+                      final map = (child.value ?? {}) as Map<dynamic, dynamic>;
+                      final ruid = map['userId'];
+                      if (ruid != null && ruid.toString() == uid) {
+                        mine.add(child);
+                      }
+                    } catch (_) {
+                      // ignore malformed child and continue
+                      continue;
+                    }
+                  }
 
                   if (mine.isEmpty) {
                     return const Center(child: Text('You have no reports.'));
                   }
 
-                  // Newest-first
+                  // Sort newest-first using timestamp if available
                   mine.sort((a, b) {
-                    final at = (a.child('timestamp').value ?? 0) as num;
-                    final bt = (b.child('timestamp').value ?? 0) as num;
+                    num at = 0;
+                    num bt = 0;
+                    try {
+                      at = (a.child('timestamp').value ?? 0) as num;
+                    } catch (_) {
+                      at = 0;
+                    }
+                    try {
+                      bt = (b.child('timestamp').value ?? 0) as num;
+                    } catch (_) {
+                      bt = 0;
+                    }
                     return bt.compareTo(at);
                   });
 
@@ -76,14 +95,22 @@ class MyReportsPage extends StatelessWidget {
                       final floor =
                           (data['floor'] ?? data['location'] ?? '').toString();
                       final room = (data['room'] ?? '').toString();
-                      final timeMs = (data['timestamp'] ?? 0) as num;
+
+                      // timestamp safe parsing
+                      num timeMs = 0;
+                      try {
+                        timeMs = (data['timestamp'] ?? 0) as num;
+                      } catch (_) {
+                        timeMs = 0;
+                      }
                       final status = (data['status'] ?? 'active').toString();
 
                       final date =
-                          DateTime.fromMillisecondsSinceEpoch(timeMs.toInt());
-                      final timeStr =
-                          "${date.year}-${date.month.toString().padLeft(2, '0')}-${date.day.toString().padLeft(2, '0')} "
-                          "${date.hour.toString().padLeft(2, '0')}:${date.minute.toString().padLeft(2, '0')}";
+                          DateTime.fromMillisecondsSinceEpoch((timeMs).toInt());
+                      final timeStr = timeMs > 0
+                          ? "${date.year}-${date.month.toString().padLeft(2, '0')}-${date.day.toString().padLeft(2, '0')} "
+                              "${date.hour.toString().padLeft(2, '0')}:${date.minute.toString().padLeft(2, '0')}"
+                          : 'Unknown time';
 
                       Color statusColor() {
                         final s = status.toLowerCase();
@@ -157,11 +184,19 @@ class MyReportsPage extends StatelessWidget {
     final status = (data['status'] ?? '').toString();
     final reporter =
         (data['userName'] ?? data['reporterName'] ?? '').toString();
-    final timeMs = (data['timestamp'] ?? 0) as num;
-    final date = DateTime.fromMillisecondsSinceEpoch(timeMs.toInt());
-    final timeStr =
-        "${date.year}-${date.month.toString().padLeft(2, '0')}-${date.day.toString().padLeft(2, '0')} "
-        "${date.hour.toString().padLeft(2, '0')}:${date.minute.toString().padLeft(2, '0')}";
+
+    num timeMs = 0;
+    try {
+      timeMs = (data['timestamp'] ?? 0) as num;
+    } catch (_) {
+      timeMs = 0;
+    }
+
+    final date = DateTime.fromMillisecondsSinceEpoch((timeMs).toInt());
+    final timeStr = timeMs > 0
+        ? "${date.year}-${date.month.toString().padLeft(2, '0')}-${date.day.toString().padLeft(2, '0')} "
+            "${date.hour.toString().padLeft(2, '0')}:${date.minute.toString().padLeft(2, '0')}"
+        : 'Unknown time';
 
     showDialog(
       context: context,

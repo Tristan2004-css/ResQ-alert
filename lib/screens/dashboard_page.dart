@@ -42,11 +42,96 @@ class DashboardPage extends StatelessWidget {
           ),
           centerTitle: true,
           actions: [
-            IconButton(
-              icon: const Icon(Icons.notifications_none),
-              onPressed: () =>
-                  Navigator.pushNamed(context, NotificationsPage.routeName),
+            // ===== START: Notification icon with badge (shows unread + active alerts) =====
+            StreamBuilder<DatabaseEvent>(
+              stream: FirebaseDatabase.instance
+                  .ref('alerts')
+                  .orderByChild('timestamp')
+                  .onValue,
+              builder: (context, snapshot) {
+                int badgeCount = 0;
+
+                if (snapshot.hasData && snapshot.data!.snapshot.exists) {
+                  final snap = snapshot.data!.snapshot;
+                  // iterate children and count active & unread items
+                  for (final child in snap.children) {
+                    try {
+                      final data = (child.value ?? {}) as Map<dynamic, dynamic>;
+                      final statusValue = (data['status'] ?? '')
+                          .toString()
+                          .toLowerCase()
+                          .replaceAll('_', ' ')
+                          .trim();
+                      // skip resolved / closed
+                      if (statusValue == 'resolved' || statusValue == 'closed')
+                        continue;
+
+                      // treat unread when 'read' is null/false (adjust if your app uses a different field)
+                      final readVal = data['read'];
+                      final isRead = (readVal is bool) ? readVal : false;
+
+                      if (!isRead) {
+                        badgeCount++;
+                      }
+                    } catch (_) {
+                      // ignore malformed child and continue
+                      continue;
+                    }
+                  }
+                }
+
+                // notification button (still navigates to notifications page)
+                return Padding(
+                  padding: const EdgeInsets.only(right: 8.0),
+                  child: GestureDetector(
+                    behavior: HitTestBehavior.opaque,
+                    onTap: () => Navigator.pushNamed(
+                        context, NotificationsPage.routeName),
+                    child: Stack(
+                      clipBehavior: Clip.none,
+                      children: [
+                        const Padding(
+                          padding: EdgeInsets.symmetric(
+                              horizontal: 6.0, vertical: 8.0),
+                          child: Icon(Icons.notifications_none, size: 24),
+                        ),
+                        if (badgeCount > 0)
+                          Positioned(
+                            right: -2,
+                            top: -2,
+                            child: Container(
+                              padding: const EdgeInsets.symmetric(
+                                  horizontal: 6, vertical: 2),
+                              decoration: BoxDecoration(
+                                color: Colors.red,
+                                borderRadius: BorderRadius.circular(12),
+                                border:
+                                    Border.all(color: Colors.white, width: 1.5),
+                              ),
+                              constraints: const BoxConstraints(
+                                  minWidth: 20, minHeight: 20),
+                              child: Center(
+                                child: Text(
+                                  badgeCount > 99
+                                      ? '99+'
+                                      : badgeCount.toString(),
+                                  style: const TextStyle(
+                                    color: Colors.white,
+                                    fontSize: 11,
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                  textAlign: TextAlign.center,
+                                ),
+                              ),
+                            ),
+                          ),
+                      ],
+                    ),
+                  ),
+                );
+              },
             ),
+            // ===== END: notification icon with badge =====
           ],
         ),
         drawer: const AppDrawer(),
@@ -111,16 +196,19 @@ class DashboardPage extends StatelessWidget {
                             int myCount = 0;
 
                             if (snapshot.hasData &&
-                                snapshot.data!.snapshot.value != null &&
+                                snapshot.data!.snapshot.exists &&
                                 uid != null) {
-                              final raw = snapshot.data!.snapshot.value
-                                  as Map<dynamic, dynamic>;
-                              for (final entry in raw.entries) {
-                                final d =
-                                    Map<String, dynamic>.from(entry.value);
-                                if (d['userId'] != null &&
-                                    d['userId'].toString() == uid) {
-                                  myCount++;
+                              final snap = snapshot.data!.snapshot;
+                              // iterate children safely
+                              for (final child in snap.children) {
+                                try {
+                                  final userIdVal = child.child('userId').value;
+                                  if (userIdVal != null &&
+                                      userIdVal.toString() == uid) {
+                                    myCount++;
+                                  }
+                                } catch (_) {
+                                  continue;
                                 }
                               }
                             }
@@ -222,11 +310,14 @@ class DashboardPage extends StatelessWidget {
 
                           final snap = snapshot.data?.snapshot;
                           if (snap == null || !snap.exists) {
-                            return const Padding(
-                              padding: EdgeInsets.all(8.0),
-                              child: Text('No recent alerts.',
-                                  style: TextStyle(
-                                      color: Colors.black54, fontSize: 12)),
+                            return const SizedBox(
+                              height:
+                                  64, // small height when there are no alerts
+                              child: Center(
+                                child: Text('No recent alerts.',
+                                    style: TextStyle(
+                                        color: Colors.black54, fontSize: 12)),
+                              ),
                             );
                           }
 
@@ -242,16 +333,33 @@ class DashboardPage extends StatelessWidget {
 
                           // ===== NEW: filter out resolved/closed alerts =====
                           final visibleChildren = children.where((c) {
-                            final statusValue =
-                                (c.child('status').value ?? '').toString();
-                            final s = statusValue
-                                .toLowerCase()
-                                .replaceAll('_', ' ')
-                                .trim();
-                            // treat resolved/closed as not visible in recent alerts
-                            if (s == 'resolved' || s == 'closed') return false;
+                            try {
+                              final statusValue =
+                                  (c.child('status').value ?? '').toString();
+                              final s = statusValue
+                                  .toLowerCase()
+                                  .replaceAll('_', ' ')
+                                  .trim();
+                              // treat resolved/closed as not visible in recent alerts
+                              if (s == 'resolved' || s == 'closed')
+                                return false;
+                            } catch (_) {
+                              // if status missing or malformed, keep the item
+                            }
                             return true;
                           }).toList();
+
+                          // ===== NEW: when filtered list is empty, show a small placeholder =====
+                          if (visibleChildren.isEmpty) {
+                            return const SizedBox(
+                              height: 64,
+                              child: Center(
+                                child: Text('No recent alerts.',
+                                    style: TextStyle(
+                                        color: Colors.black54, fontSize: 12)),
+                              ),
+                            );
+                          }
 
                           // Show a fixed-height ListView that displays 3 cards' worth of space
                           // so the user can scroll vertically to see more alerts.
@@ -422,6 +530,9 @@ class DashboardPage extends StatelessWidget {
                     child: Image.asset(
                       'assets/EmergencyHotlines.jpg',
                       fit: BoxFit.cover,
+                      // if image missing, it won't crash the page
+                      errorBuilder: (ctx, err, st) => const SizedBox(
+                          height: 120, child: Center(child: Text('Hotlines'))),
                     ),
                   ),
                 ),

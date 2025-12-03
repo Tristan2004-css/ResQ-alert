@@ -310,7 +310,7 @@ class _EmergencyPageState extends State<EmergencyPage> {
                 children: [
                   // kept your logo Image.asset call (if you want removed, say so)
                   Image.asset(
-                    'assets/logo.png',
+                    'assets/logooo.png',
                     width: 35,
                     height: 35,
                   ),

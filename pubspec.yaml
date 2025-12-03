@@ -9,17 +9,30 @@ dependencies:
   flutter:
     sdk: flutter
 
-  firebase_core: ^3.7.0
-  firebase_auth: ^5.1.2
-  cloud_firestore: ^5.0.3
-  firebase_database: ^11.0.3
-  firebase_app_check: ^0.3.2+10
-  local_auth: ^2.1.0  # or latest
-  shared_preferences: ^2.1.1
-  http: ^1.6.0
-  onesignal_flutter: ^5.3.4
+  cupertino_icons: ^1.0.6
 
-  
+  # Firebase
+  firebase_core: ^3.9.0
+  firebase_auth: ^5.3.0
+  cloud_firestore: ^5.4.2
+  firebase_messaging: ^15.0.3
+  firebase_database: ^11.3.10
+  # Notifications / sound / torch
+  flutter_local_notifications: ^17.1.2
+  audioplayers: ^5.0.4
+  torch_light: ^1.1.0
+
+  # Permissions
+  permission_handler: ^11.0.1
+
+  # Device info & local storage
+  shared_preferences: ^2.1.1
+  package_info_plus: ^9.0.0
+  connectivity_plus: ^4.0.1
+  device_info_plus: ^9.0.0
+  # Networking
+  http: ^0.13.6
+
 dev_dependencies:
   flutter_test:
     sdk: flutter
@@ -30,13 +43,8 @@ flutter:
     - assets/whitelog.png
     - assets/wcc_logo.png
     - assets/help_about_placeholder.png
-    - assets/em_medical.png
-    - assets/em_fire.png
-    - assets/em_security.png
-    - assets/em_accident.png
-    - assets/em_natural.png
-    - assets/em_other.png
-    - assets/logo.png
     - assets/RQ.png
     - assets/res.jpg
     - assets/EmergencyHotlines.jpg
+    - assets/sounds/alert_sound.mp3
+    - assets/logooo.png

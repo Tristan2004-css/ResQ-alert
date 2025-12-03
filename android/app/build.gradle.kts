@@ -1,40 +1,47 @@
+// android/app/build.gradle.kts
+import org.jetbrains.kotlin.gradle.tasks.KotlinCompile
+import org.gradle.api.tasks.compile.JavaCompile
+
 plugins {
     id("com.android.application")
-    id("kotlin-android")
-    // The Flutter Gradle Plugin must be applied after the Android and Kotlin Gradle plugins.
+    id("org.jetbrains.kotlin.android")
     id("dev.flutter.flutter-gradle-plugin")
+    id("com.google.gms.google-services")
 }
 
 android {
-    namespace = "com.example.flutter_application_1"
-        compileSdk = flutter.compileSdkVersion
-        ndkVersion = flutter.ndkVersion
-        
+    namespace = "com.example.flutter_application_1" // replace if different
+    compileSdk = 36
+
+    defaultConfig {
+        applicationId = "com.example.flutter_application_1"
+        minSdk = 28
+        targetSdk = 36
+        versionCode = flutter.versionCode
+        versionName = flutter.versionName
+        testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
+    }
+
     compileOptions {
-        sourceCompatibility = JavaVersion.VERSION_11
-        targetCompatibility = JavaVersion.VERSION_11
+        sourceCompatibility = JavaVersion.VERSION_17
+        targetCompatibility = JavaVersion.VERSION_17
+        isCoreLibraryDesugaringEnabled = true
     }
 
     kotlinOptions {
-        jvmTarget = JavaVersion.VERSION_11.toString()
-    }
-    
-
-    defaultConfig {
-        // TODO: Specify your own unique Application ID (https://developer.android.com/studio/build/application-id.html).
-        applicationId = "com.example.flutter_application_1"
-        // You can update the following values to match your application needs.
-        // For more information, see: https://flutter.dev/to/review-gradle-config.
-        minSdk = flutter.minSdkVersion
-        targetSdk = flutter.targetSdkVersion
-        versionCode = flutter.versionCode
-        versionName = flutter.versionName
+        jvmTarget = "17"
     }
 
     buildTypes {
-        release {
-            // TODO: Add your own signing config for the release build.
-            // Signing with the debug keys for now, so `flutter run --release` works.
+        getByName("debug") {
+            isMinifyEnabled = false
+            isShrinkResources = false
+            signingConfig = signingConfigs.getByName("debug")
+        }
+        getByName("release") {
+            isMinifyEnabled = true
+            isShrinkResources = true
+            proguardFiles(getDefaultProguardFile("proguard-android-optimize.txt"), "proguard-rules.pro")
             signingConfig = signingConfigs.getByName("debug")
         }
     }
@@ -45,9 +52,23 @@ flutter {
 }
 
 dependencies {
-    // Import the Firebase BoM
-        implementation(platform("com.google.firebase:firebase-bom:34.6.0"))
-        implementation("com.google.firebase:firebase-analytics")
-        implementation("com.google.firebase:firebase-auth")
-        implementation("com.google.firebase:firebase-firestore")
+    // if you use Firebase BOM adapt accordingly
+    implementation(platform("com.google.firebase:firebase-bom:34.6.0"))
+    implementation("com.google.firebase:firebase-analytics")
+    implementation("com.google.firebase:firebase-auth")
+    implementation("com.google.firebase:firebase-firestore")
+    implementation("com.google.firebase:firebase-messaging:23.3.2")
+    implementation("androidx.appcompat:appcompat:1.6.1")
+
+    implementation("org.jetbrains.kotlin:kotlin-stdlib-jdk8:1.9.0")
+    coreLibraryDesugaring("com.android.tools:desugar_jdk_libs:2.1.4")
+}
+
+// Ensure all compile tasks target Java 17
+tasks.withType(KotlinCompile::class.java).configureEach {
+    kotlinOptions { jvmTarget = "17" }
+}
+tasks.withType(JavaCompile::class.java).configureEach {
+    sourceCompatibility = "17"
+    targetCompatibility = "17"
 }
