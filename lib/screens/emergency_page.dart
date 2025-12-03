@@ -337,7 +337,8 @@ class _EmergencyPageState extends State<EmergencyPage> {
                   crossAxisCount: crossAxisCount,
                   mainAxisSpacing: 12,
                   crossAxisSpacing: 12,
-                  childAspectRatio: 1.15,
+                  // adjust aspect ratio slightly to avoid text overflow on small screens
+                  childAspectRatio: 1.0,
                   children: types.map((label) {
                     final isSelected = selected == label;
 
@@ -367,23 +368,25 @@ class _EmergencyPageState extends State<EmergencyPage> {
                               // EMOJI ONLY
                               Text(
                                 emoji,
-                                style: const TextStyle(fontSize: 38),
+                                style: const TextStyle(fontSize: 36),
                               ),
 
                               const SizedBox(height: 10),
 
-                              // TEXT ONLY
-                              Text(
-                                textOnly,
-                                textAlign: TextAlign.center,
-                                maxLines: 2,
-                                overflow: TextOverflow.ellipsis,
-                                style: TextStyle(
-                                  fontSize: 13,
-                                  fontWeight: isSelected
-                                      ? FontWeight.bold
-                                      : FontWeight.w600,
-                                  color: isSelected ? red : Colors.black87,
+                              // TEXT ONLY - allow up to 3 lines & wrap to prevent overflow
+                              Flexible(
+                                child: Text(
+                                  textOnly,
+                                  textAlign: TextAlign.center,
+                                  maxLines: 3,
+                                  overflow: TextOverflow.ellipsis,
+                                  style: TextStyle(
+                                    fontSize: 13,
+                                    fontWeight: isSelected
+                                        ? FontWeight.bold
+                                        : FontWeight.w600,
+                                    color: isSelected ? red : Colors.black87,
+                                  ),
                                 ),
                               ),
 
